@@ -1,0 +1,11 @@
+# SSL Certificates
+*.crt
+*.key
+*.pem
+
+# Compiled server binary
+server
+
+# Temporary files
+*.o
+*.tmp
