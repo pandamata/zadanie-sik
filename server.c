@@ -15,7 +15,7 @@
 // Function to initialize OpenSSL (modern way - OpenSSL 1.1.0+)
 void init_openssl() {
     // In OpenSSL 1.1.0+, initialization is done automatically
-    // No need for SSL_load_error_strings() or OpenSSL_add_ssl_algorithms()
+    // SSL_load_error_strings() is kept for better error reporting
     SSL_load_error_strings();
 }
 
@@ -210,9 +210,12 @@ int main() {
             
             // 2. Drain any remaining data using recv() in a loop
             char drain_buffer[256];
-            while (recv(client_socket, drain_buffer, sizeof(drain_buffer), MSG_DONTWAIT) > 0) {
+            ssize_t n;
+            while ((n = recv(client_socket, drain_buffer, sizeof(drain_buffer), MSG_DONTWAIT)) > 0) {
                 // Just drain the data
             }
+            // Note: recv returns -1 with errno==EAGAIN/EWOULDBLOCK when done,
+            // or 0 on clean shutdown, both are OK here
             
             // 3. Call shutdown on the socket
             shutdown(client_socket, SHUT_RDWR);
