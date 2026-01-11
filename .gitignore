@@ -2,6 +2,7 @@
 *.crt
 *.key
 *.pem
+openssl.cnf
 
 # Compiled server binary
 server

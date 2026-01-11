@@ -26,11 +26,53 @@ sudo apt install libssl-dev
 ```
 
 ### Generate SSL Certificates
+
+**IMPORTANT**: Chrome requires certificates with Subject Alternative Names (SANs). Use this method:
+
+**Quick method (recommended):**
 ```bash
+./generate_cert.sh
+```
+
+**Manual method:**
+```bash
+# Create OpenSSL config file with SANs
+cat > openssl.cnf << EOF
+[req]
+default_bits = 2048
+prompt = no
+default_md = sha256
+distinguished_name = dn
+x509_extensions = v3_req
+
+[dn]
+C = PL
+ST = Poznan
+L = Poznan
+O = UAM
+OU = CS
+CN = localhost
+
+[v3_req]
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.1 = localhost
+DNS.2 = *.localhost
+IP.1 = 127.0.0.1
+IP.2 = ::1
+EOF
+
+# Generate certificate with SANs
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -keyout server.key -out server.crt \
-  -subj "/C=PL/ST=Poznan/L=Poznan/O=UAM/OU=CS/CN=localhost"
+  -config openssl.cnf
+
+# Verify SANs are included
+openssl x509 -in server.crt -text -noout | grep -A 1 "Subject Alternative Name"
 ```
+
+**Note**: Without SANs, Chrome will reject the certificate even for localhost. Firefox is more lenient but Chrome strictly requires SANs for all certificates.
 
 ### Compile
 ```bash
@@ -103,9 +145,15 @@ openssl s_client -connect localhost:8443
 - **This is EXPECTED** - self-signed certificates trigger this warning
 - **Solution**: Click "Advanced..." then "Accept the Risk and Continue"
 
-### Chrome shows "Your connection is not private"
+### Chrome shows "Your connection is not private" or NET::ERR_CERT_AUTHORITY_INVALID
 - **This is EXPECTED** - self-signed certificates trigger this warning  
 - **Solution**: Click "Advanced" then "Proceed to localhost (unsafe)"
+- **IMPORTANT**: If Chrome refuses to connect at all, your certificate may be missing Subject Alternative Names (SANs). Regenerate using the command in "Generate SSL Certificates" section above.
+
+### Chrome refuses to connect or shows certificate errors
+- **Cause**: Certificate missing Subject Alternative Names (SANs) - Chrome requires these even for localhost
+- **Solution**: Delete old certificates and regenerate using the OpenSSL config file method shown in "Generate SSL Certificates" section
+- **Verification**: Run `openssl x509 -in server.crt -text -noout | grep "Subject Alternative Name"` to confirm SANs are present
 
 ### Connection works with curl but not browsers
 - **Make sure you're using the correct URL with port**: `https://localhost:8443/`
